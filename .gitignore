@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Runtime files
+*.pid
+scratchpad.md

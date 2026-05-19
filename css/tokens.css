@@ -1,0 +1,79 @@
+/* ============================================================
+   MathReview — Design Tokens
+   Direction: editorial-monocle + Claude terracotta accent
+   ============================================================ */
+
+:root {
+  /* Claude-inspired palette with editorial warmth */
+  --bg:        #f5f4ed;
+  --surface:   #faf9f5;
+  --fg:        #141413;
+  --muted:     #5e5d59;
+  --dim:       #87867f;
+  --border:    #f0eee6;
+  --border-strong: #e8e6dc;
+  --accent:    #c96442;
+  --accent-light: #d97757;
+  --accent-bg: rgba(201, 100, 66, 0.08);
+  --dark:      #30302e;
+  --dark-deep: #141413;
+  --silver:    #b0aea5;
+  --success:   #3d7a5a;
+  --warn:      #b8860b;
+  --danger:    #b53333;
+
+  /* Typography */
+  --font-display: 'Iowan Old Style', 'Charter', Georgia, 'Noto Serif SC', serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  /* Spacing (8px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  /* Shadows (Claude ring style) */
+  --shadow-ring: 0 0 0 1px var(--border-strong);
+  --shadow-ring-accent: 0 0 0 1px var(--accent);
+  --shadow-whisper: rgba(0,0,0,0.04) 0px 4px 24px;
+  --shadow-elevated: rgba(0,0,0,0.06) 0px 8px 32px;
+
+  /* Layout */
+  --header-height: 52px;
+  --tabbar-height: 64px;
+  --content-max: 720px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme="dark"] {
+  --bg:        #141413;
+  --surface:   #1c1c1a;
+  --fg:        #f5f4ed;
+  --muted:     #b0aea5;
+  --dim:       #87867f;
+  --border:    #30302e;
+  --border-strong: #3d3d3a;
+  --accent:    #d97757;
+  --accent-light: #e89473;
+  --accent-bg: rgba(217, 119, 87, 0.12);
+  --dark:      #f0eee6;
+  --dark-deep: #faf9f5;
+  --silver:    #5e5d59;
+  --success:   #5daa7a;
+  --warn:      #d4a843;
+  --danger:    #e06666;
+}
