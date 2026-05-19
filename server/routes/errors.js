@@ -15,12 +15,7 @@ router.get('/', authMiddleware, (req, res) => {
     [req.userId]
   );
 
-  const result = errors.map(e => ({
-    ...e,
-    options: e.options ? JSON.parse(e.options) : null
-  }));
-
-  res.json({ errors: result });
+  res.json({ errors });
 });
 
 // Review an error (increment review count)

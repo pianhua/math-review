@@ -165,14 +165,27 @@ function query(sql, params = []) {
 
 function run(sql, params = []) {
   db.run(sql, params);
-  saveDb();
 }
 
 function insert(sql, params = []) {
   db.run(sql, params);
-  saveDb();
   const result = query('SELECT last_insert_rowid() as id');
   return result[0]?.id;
+}
+
+function startAutoSave(intervalMs = 30000) {
+  const timer = setInterval(() => {
+    saveDb();
+  }, intervalMs);
+
+  function onExit() {
+    clearInterval(timer);
+    saveDb();
+    process.exit(0);
+  }
+
+  process.on('SIGINT', onExit);
+  process.on('SIGTERM', onExit);
 }
 
 module.exports = {
@@ -181,5 +194,6 @@ module.exports = {
   query,
   run,
   insert,
-  saveDb
+  saveDb,
+  startAutoSave
 };

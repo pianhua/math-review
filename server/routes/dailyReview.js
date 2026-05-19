@@ -44,12 +44,20 @@ router.get('/', authMiddleware, async (req, res) => {
   );
   const completedIds = new Set(completed.map(c => c.problem_id));
 
+  // Attach bookmark status
+  const bookmarks = query(
+    'SELECT item_id FROM bookmarks WHERE user_id = ? AND item_type = ?',
+    [req.userId, 'problem']
+  );
+  const bookmarkSet = new Set(bookmarks.map(b => b.item_id));
+
   res.json({
     review: {
       ...review[0],
       problems: problems.map(p => ({
         ...p,
-        completed: completedIds.has(p.id)
+        completed: completedIds.has(p.id),
+        bookmarked: bookmarkSet.has(p.id)
       })),
       completed_count: completedIds.size,
       total_count: problems.length

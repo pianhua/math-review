@@ -28,11 +28,11 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !token) {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return '/login'
   }
-  if (to.meta.guest && token) {
+  if (to.meta.guest && auth.isLoggedIn) {
     return '/'
   }
 })

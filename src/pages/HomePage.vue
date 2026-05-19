@@ -147,7 +147,7 @@ async function generateReview() {
   try {
     review.value = await generateDailyReview()
   } catch (err) {
-    alert('生成失败：' + (err.response?.data?.error || err.message))
+    alert('生成失败：' + (err.response?.data?.error || err.message || '请检查网络连接'))
   } finally {
     generating.value = false
   }

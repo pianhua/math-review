@@ -265,8 +265,11 @@ const nextOrReset = () => {
     if (mode.value === 'daily') {
       router.push('/')
     } else {
-      resetProblem()
-      currentProblemIdx.value = 0
+      // Show completion and reset
+      if (confirm('本组题目已完成，是否重新开始？')) {
+        resetProblem()
+        currentProblemIdx.value = 0
+      }
     }
   } else {
     nextProblem()

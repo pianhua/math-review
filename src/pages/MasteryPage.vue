@@ -36,8 +36,8 @@
               stroke="var(--border)" stroke-width="1"/>
         <polygon :points="getDataPoints()" fill="rgba(201,100,66,0.15)" stroke="var(--accent)" stroke-width="2"/>
         <circle v-for="(chapter, i) in mastery.chapters" :key="'point-'+i"
-                :cx="getPointX(i, getDataRadius(chapter.correct))"
-                :cy="getPointY(i, getDataRadius(chapter.correct))"
+                :cx="getPointX(i, getDataRadius(chapter))"
+                :cy="getPointY(i, getDataRadius(chapter))"
                 r="4" fill="var(--accent)"/>
         <text v-for="(chapter, i) in mastery.chapters" :key="'label-'+i"
               :x="getLabelX(i)" :y="getLabelY(i)"
@@ -115,8 +115,9 @@ const getPointY = (i, dist) => {
   return cy + dist * Math.sin(angle)
 }
 
-const getDataRadius = (correct) => {
-  return (correct / maxVal.value) * r
+const getDataRadius = (chapter) => {
+  const accuracy = chapter.solved > 0 ? (chapter.correct / chapter.solved) : 0
+  return accuracy * r
 }
 
 const getDataPoints = () => {

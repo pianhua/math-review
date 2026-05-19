@@ -10,7 +10,7 @@
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
         </button>
-        <button class="btn btn-ghost" @click="auth.logout" aria-label="退出登录">
+        <button class="btn btn-ghost" @click="() => { auth.logout(); router.push('/login') }" aria-label="退出登录">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
@@ -58,10 +58,19 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth.js'
 
 const auth = useAuthStore()
+const router = useRouter()
+const route = useRoute()
+
+watch(() => auth.isLoggedIn, (loggedIn) => {
+  if (!loggedIn && route.meta.requiresAuth) {
+    router.push('/login')
+  }
+})
 
 const tabs = [
   { path: '/', label: '首页', icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },

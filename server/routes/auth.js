@@ -7,12 +7,8 @@ const router = express.Router();
 
 // Register
 router.post('/register', async (req, res) => {
-  console.log('REGISTER_HANDLER_ENTER');
   try {
-    console.log('REGISTER_TRY_ENTER');
-    console.log('Body:', JSON.stringify(req.body));
     const { username, password } = req.body;
-    console.log('Register attempt:', username);
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -27,22 +23,15 @@ router.post('/register', async (req, res) => {
     }
 
     const existing = query('SELECT id FROM users WHERE username = ?', [username]);
-    console.log('Existing users:', existing);
     if (existing.length > 0) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log('Hash generated');
-
     run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, passwordHash]);
-    console.log('Insert done');
 
     const users = query('SELECT id, username, created_at FROM users WHERE username = ?', [username]);
-    console.log('Query result:', JSON.stringify(users));
-
     if (users.length === 0) {
-      console.error('User not found after insert!');
       return res.status(500).json({ error: 'User creation failed' });
     }
     const user = users[0];
@@ -54,7 +43,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ error: 'REGISTER_FAIL_V2: ' + (err?.message || String(err)) });
+    res.status(500).json({ error: err?.message || 'Registration failed' });
   }
 });
 

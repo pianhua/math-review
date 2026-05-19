@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { initDb } = require('./db');
+const { initDb, startAutoSave } = require('./db');
 const { startCron } = require('./cron');
 
 const app = express();
@@ -43,6 +43,7 @@ app.use((err, req, res, next) => {
 
 async function start() {
   await initDb();
+  startAutoSave();
   startCron();
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

@@ -1,5 +1,10 @@
 <template>
   <div v-if="loading" class="empty-state">加载中...</div>
+  <div v-else-if="error" class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    <div>加载失败</div>
+    <div style="font-size:0.85rem;color:var(--dim);margin-top:4px">{{ error }}</div>
+  </div>
   <div v-else>
     <h1 class="screen-title">公式 · 知识点</h1>
 
@@ -41,6 +46,7 @@ import { getFormulas } from '../api/formulas.js'
 import { addBookmark, removeBookmark } from '../api/bookmarks.js'
 
 const loading = ref(true)
+const error = ref('')
 const formulas = ref([])
 const filter = ref('all')
 
@@ -75,6 +81,7 @@ onMounted(async () => {
   try {
     formulas.value = await getFormulas()
   } catch (err) {
+    error.value = err.response?.data?.error || err.message || '请检查网络连接'
     console.error('Failed to load formulas:', err)
   } finally {
     loading.value = false
