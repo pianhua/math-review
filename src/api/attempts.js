@@ -9,3 +9,8 @@ export async function submitAttempt(problemId, selectedAnswer, isCorrect, timeSp
   })
   return res.data
 }
+
+export async function getMastery(problemId) {
+  const res = await client.get(`/attempts/mastery/${problemId}`)
+  return res.data
+}

@@ -14,7 +14,7 @@
     <!-- 模式说明 -->
     <div v-if="mode === 'daily'" class="card" style="padding:var(--space-3);margin-bottom:var(--space-3)">
       <div style="font-size:0.85rem;color:var(--muted)">
-        今日复习 · 共 {{ problems.length }} 题 · 所有同学题目相同
+        今日复习 · 共 {{ problems.length }} 题
       </div>
     </div>
 
@@ -30,112 +30,21 @@
       </button>
     </div>
 
-    <!-- 题目卡片 -->
-    <div class="problem-card">
-      <div class="problem-header">
-        <span class="tag" :class="getDiffTag(currentProblem.difficulty)">{{ getDiffLabel(currentProblem.difficulty) }}</span>
-        <span class="tag tag-source">{{ currentProblem.source }}</span>
-        <span class="tag" style="background:var(--accent-bg);color:var(--accent)">{{ currentProblem.type }}</span>
-      </div>
-
-      <div class="problem-content" v-html="renderLatex(currentProblem.content)"></div>
-
-      <!-- 选择题 -->
-      <div v-if="isChoice" class="problem-options">
-        <button v-for="opt in currentProblem.options" :key="opt.label"
-                class="option-row"
-                :class="getOptionClass(opt.label)"
-                :disabled="answered"
-                @click="selectOption(opt.label)">
-          <span class="option-label">{{ opt.label }}</span>
-          <span v-html="renderLatex(opt.text)"></span>
-        </button>
-      </div>
-
-      <!-- 填空/解答题输入区 -->
-      <div v-else class="mb-3">
-        <div v-if="!answerRevealed">
-          <textarea
-            v-if="isEssay"
-            v-model="userAnswer"
-            class="problem-input"
-            rows="6"
-            placeholder="在此输入你的解题过程..."
-          ></textarea>
-          <input
-            v-else
-            v-model="userAnswer"
-            class="problem-input"
-            type="text"
-            placeholder="在此输入你的答案..."
-          >
-          <button class="btn btn-primary w-full mt-2" @click="revealAnswer" :disabled="!userAnswer.trim()">
-            提交答案
-          </button>
-        </div>
-      </div>
-
-      <!-- 答案与解析 -->
-      <div v-if="showExplanation" class="answer-panel">
-        <!-- 知识点 -->
-        <div v-if="currentProblem.knowledge_point" class="knowledge-block">
-          <div class="answer-label">知识点</div>
-          <div class="knowledge-content" v-html="renderLatex(currentProblem.knowledge_point)"></div>
-        </div>
-
-        <!-- 正确答案 -->
-        <div class="answer-block">
-          <div class="answer-label">正确答案</div>
-          <div class="answer-content" v-html="renderLatex(currentProblem.correct)"></div>
-        </div>
-
-        <!-- 解析 -->
-        <div class="explanation-block">
-          <div class="answer-label">解析</div>
-          <div v-html="renderLatex(currentProblem.explanation)"></div>
-        </div>
-
-        <!-- 非选择题：自评（未评分前显示） -->
-        <div v-if="!isChoice && selfRatedCorrect === null" class="flex gap-2 mt-3">
-          <div style="font-size:0.85rem;color:var(--muted);margin-right:auto;padding-top:6px">
-            请对照答案判断自己是否做对
-          </div>
-          <button class="btn btn-sm btn-primary" @click="selfRate(true)">我做对了</button>
-          <button class="btn btn-sm btn-secondary" @click="selfRate(false)">我做错了</button>
-        </div>
-
-        <!-- 下一题 / 收藏 -->
-        <div v-if="isChoice || selfRatedCorrect !== null" class="flex gap-2 mt-3">
-          <button class="btn btn-secondary btn-sm" @click="nextOrReset">{{ isLast ? '完成' : '下一题' }}</button>
-          <button class="btn btn-ghost btn-sm" @click="toggleBookmark(currentProblem.id)">
-            <svg width="16" height="16" viewBox="0 0 24 24" :fill="currentProblem.bookmarked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-            </svg>
-            {{ currentProblem.bookmarked ? '已收藏' : '收藏' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 导航 -->
-      <div v-if="!answered" class="flex justify-between items-center mt-2">
-        <span style="font-size:0.8rem;color:var(--dim)">第 {{ currentProblemIdx + 1 }} / {{ filteredProblems.length }} 题</span>
-        <div class="flex gap-2">
-          <button class="btn btn-ghost btn-sm" @click="prevProblem" :disabled="currentProblemIdx === 0">上一题</button>
-          <button class="btn btn-ghost btn-sm" @click="nextProblem" :disabled="currentProblemIdx === filteredProblems.length - 1">下一题</button>
-        </div>
-      </div>
-    </div>
+    <!-- 题目卡片（复用 ProblemCard） -->
+    <ProblemCard
+      :problems="filteredProblems"
+      :show-mastery="mode === 'daily'"
+      @complete="onComplete"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { renderLatex } from '../utils/latex.js'
 import { getProblems } from '../api/problems.js'
 import { getDailyReview } from '../api/dailyReview.js'
-import { addBookmark, removeBookmark } from '../api/bookmarks.js'
-import { submitAttempt } from '../api/attempts.js'
+import ProblemCard from '../components/ProblemCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,16 +52,8 @@ const router = useRouter()
 const loading = ref(true)
 const problems = ref([])
 const filter = ref('all')
-const currentProblemIdx = ref(0)
-const selectedOption = ref(null)
-const showExplanation = ref(false)
-const userAnswer = ref('')
-const answerRevealed = ref(false)
-const selfRatedCorrect = ref(null)
 
-// Mode from URL: daily, all, chapter, bookmark, wrong
 const mode = computed(() => route.query.mode || 'all')
-const targetId = computed(() => route.query.id || null)
 
 const pageTitle = computed(() => {
   if (mode.value === 'daily') return '今日复习'
@@ -194,146 +95,23 @@ const filteredProblems = computed(() => {
   return problems.value.filter(p => p.chapter === filter.value)
 })
 
-const currentProblem = computed(() => {
-  return filteredProblems.value[currentProblemIdx.value] || {}
-})
-
-const isLast = computed(() => {
-  return currentProblemIdx.value === filteredProblems.value.length - 1
-})
-
-const isChoice = computed(() => {
-  return (currentProblem.value.options?.length || 0) > 0
-})
-
-const isEssay = computed(() => {
-  return currentProblem.value.type === '证明题' || currentProblem.value.type === '解答题'
-})
-
-const answered = computed(() => {
-  if (isChoice.value) return selectedOption.value !== null
-  return answerRevealed.value && selfRatedCorrect.value !== null
-})
-
 const setFilter = (f) => {
   filter.value = f
-  currentProblemIdx.value = 0
-  resetProblem()
 }
 
-const selectOption = async (label) => {
-  selectedOption.value = label
-  showExplanation.value = true
-
-  const isCorrect = label === currentProblem.value.correct
-  try {
-    await submitAttempt(currentProblem.value.id, label, isCorrect)
-  } catch (err) {
-    console.error('Submit attempt failed:', err)
+const onComplete = () => {
+  if (mode.value === 'daily') {
+    router.push('/')
   }
-}
-
-const revealAnswer = () => {
-  answerRevealed.value = true
-  showExplanation.value = true
-}
-
-const selfRate = async (isCorrect) => {
-  selfRatedCorrect.value = isCorrect
-  try {
-    await submitAttempt(currentProblem.value.id, userAnswer.value, isCorrect)
-  } catch (err) {
-    console.error('Submit attempt failed:', err)
-  }
-}
-
-const resetProblem = () => {
-  selectedOption.value = null
-  showExplanation.value = false
-  userAnswer.value = ''
-  answerRevealed.value = false
-  selfRatedCorrect.value = null
-}
-
-const nextProblem = () => {
-  currentProblemIdx.value++
-  resetProblem()
-}
-
-const prevProblem = () => {
-  currentProblemIdx.value--
-  resetProblem()
-}
-
-const nextOrReset = () => {
-  if (isLast.value) {
-    // Last problem: go back or show completion
-    if (mode.value === 'daily') {
-      router.push('/')
-    } else {
-      // Show completion and reset
-      if (confirm('本组题目已完成，是否重新开始？')) {
-        resetProblem()
-        currentProblemIdx.value = 0
-      }
-    }
-  } else {
-    nextProblem()
-  }
-}
-
-const toggleBookmark = async (id) => {
-  const prob = problems.value.find(p => p.id === id)
-  if (!prob) return
-
-  try {
-    if (prob.bookmarked) {
-      await removeBookmark(id, 'problem')
-      prob.bookmarked = false
-    } else {
-      await addBookmark(id, 'problem')
-      prob.bookmarked = true
-    }
-  } catch (err) {
-    console.error('Bookmark error:', err)
-  }
-}
-
-const getOptionClass = (label) => {
-  if (!selectedOption.value) return ''
-  if (selectedOption.value === label) {
-    return selectedOption.value === currentProblem.value.correct ? 'correct' : 'wrong'
-  }
-  return label === currentProblem.value.correct ? 'correct' : ''
-}
-
-const getDiffTag = (difficulty) => {
-  if (difficulty === 'basic') return 'tag-basic'
-  if (difficulty === 'advanced') return 'tag-advanced'
-  return 'tag-exam'
-}
-
-const getDiffLabel = (difficulty) => {
-  if (difficulty === 'basic') return '基础'
-  if (difficulty === 'advanced') return '强化'
-  return '真题'
 }
 
 onMounted(async () => {
   try {
     if (mode.value === 'daily') {
-      const review = await getDailyReview()
-      problems.value = review?.problems || []
+      const result = await getDailyReview()
+      problems.value = result.review?.problems || []
     } else {
       problems.value = await getProblems(mode.value, route.query.chapter)
-    }
-
-    // If id param provided, jump to that problem
-    if (targetId.value && problems.value.length > 0) {
-      const idx = problems.value.findIndex(p => p.id === targetId.value)
-      if (idx !== -1) {
-        currentProblemIdx.value = idx
-      }
     }
   } catch (err) {
     console.error('Failed to load problems:', err)

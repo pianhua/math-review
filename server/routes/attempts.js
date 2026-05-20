@@ -67,4 +67,14 @@ router.get('/', authMiddleware, (req, res) => {
   res.json({ attempts });
 });
 
+// Get mastery status for a specific problem
+router.get('/mastery/:problem_id', authMiddleware, (req, res) => {
+  const { problem_id } = req.params;
+  const result = query(
+    'SELECT mastery FROM user_problem_progress WHERE user_id = ? AND problem_id = ?',
+    [req.userId, problem_id]
+  );
+  res.json({ mastery: result.length > 0 ? result[0].mastery : null });
+});
+
 module.exports = router;

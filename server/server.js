@@ -21,6 +21,7 @@ app.use('/api/attempts', require('./routes/attempts'));
 app.use('/api/errors', require('./routes/errors'));
 app.use('/api/mastery', require('./routes/mastery'));
 app.use('/api/daily-review', require('./routes/dailyReview'));
+app.use('/api/weak-points', require('./routes/weakPoints'));
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

@@ -12,6 +12,7 @@ import FormulaPage from './pages/FormulaPage.vue'
 import PracticePage from './pages/PracticePage.vue'
 import ErrorsPage from './pages/ErrorsPage.vue'
 import MasteryPage from './pages/MasteryPage.vue'
+import WeakPointsPage from './pages/WeakPointsPage.vue'
 import { useAuthStore } from './stores/auth.js'
 
 const router = createRouter({
@@ -23,7 +24,8 @@ const router = createRouter({
     { path: '/formula', component: FormulaPage, meta: { requiresAuth: true } },
     { path: '/practice', component: PracticePage, meta: { requiresAuth: true } },
     { path: '/errors', component: ErrorsPage, meta: { requiresAuth: true } },
-    { path: '/mastery', component: MasteryPage, meta: { requiresAuth: true } }
+    { path: '/mastery', component: MasteryPage, meta: { requiresAuth: true } },
+    { path: '/weak-points', component: WeakPointsPage, meta: { requiresAuth: true } }
   ]
 })
 

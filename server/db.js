@@ -133,12 +133,28 @@ function createTables() {
     )
   `);
 
-  // Migrate old daily_reviews if it has user_id column
+  // Migrate daily_reviews: add user_id, change unique to (user_id, review_date)
   try {
     const cols = query("PRAGMA table_info(daily_reviews)");
-    if (cols.length > 0 && cols.some(c => c.name === 'user_id')) {
+    if (cols.length > 0 && !cols.some(c => c.name === 'user_id')) {
+      db.run(`
+        CREATE TABLE daily_reviews_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          review_date DATE NOT NULL,
+          problems TEXT NOT NULL,
+          weak_chapters TEXT,
+          generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, review_date)
+        )
+      `);
+      db.run(`
+        INSERT INTO daily_reviews_new (review_date, problems, weak_chapters, generated_at)
+        SELECT review_date, problems, weak_chapters, generated_at FROM daily_reviews
+      `);
       db.run('DROP TABLE daily_reviews');
-      console.log('Migrated old daily_reviews table');
+      db.run('ALTER TABLE daily_reviews_new RENAME TO daily_reviews');
+      console.log('Migrated daily_reviews: added user_id column');
     }
   } catch (e) {
     // table doesn't exist yet
@@ -147,10 +163,12 @@ function createTables() {
   db.run(`
     CREATE TABLE IF NOT EXISTS daily_reviews (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      review_date DATE NOT NULL UNIQUE,
+      user_id INTEGER,
+      review_date DATE NOT NULL,
       problems TEXT NOT NULL,
       weak_chapters TEXT,
-      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, review_date)
     )
   `);
 
@@ -173,6 +191,27 @@ function createTables() {
       total_correct INTEGER DEFAULT 0,
       last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, chapter)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_problem_progress (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      problem_id TEXT NOT NULL,
+      mastery TEXT CHECK(mastery IN ('weak', 'unfamiliar', 'mastered')) NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, problem_id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ai_generation_quota (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      used_today INTEGER DEFAULT 0,
+      quota_date DATE NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 }
