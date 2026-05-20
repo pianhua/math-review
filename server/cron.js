@@ -74,8 +74,8 @@ async function generateGlobalDailyReview() {
       for (const prob of generated.problems) {
         const id = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
         run(
-          `INSERT INTO problems (id, chapter, source, difficulty, type, content, options, correct, explanation, is_ai_generated, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
+          `INSERT INTO problems (id, chapter, source, difficulty, type, content, options, correct, explanation, knowledge_point, is_ai_generated, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
           [
             id,
             prob.chapter || weakChapters[0].chapter,
@@ -85,7 +85,8 @@ async function generateGlobalDailyReview() {
             prob.content,
             JSON.stringify(prob.options || []),
             prob.correct,
-            prob.explanation
+            prob.explanation,
+            prob.knowledge_point || ''
           ]
         );
         problems.push(id);

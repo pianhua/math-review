@@ -34,3 +34,6 @@ Thumbs.db
 # Runtime files
 *.pid
 scratchpad.md
+
+# External data (cloned repos)
+data/

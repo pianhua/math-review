@@ -609,6 +609,20 @@ body {
   border-radius: var(--radius-md);
 }
 
+.knowledge-block {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--accent-bg);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
+}
+
+.knowledge-content {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--fg);
+}
+
 .answer-block {
   margin-bottom: var(--space-4);
 }

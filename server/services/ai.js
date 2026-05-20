@@ -38,6 +38,7 @@ ${chapterList}
         {"label": "D", "text": "$选项D内容$"}
       ],
       "correct": "C",
+      "knowledge_point": "本题涉及的核心知识点（1-2个公式或定理，LaTeX格式，如$\\lim_{x\\to 0}\\frac{\\sin x}{x}=1$）",
       "explanation": "详细解析（LaTeX格式）"
     }
   ]

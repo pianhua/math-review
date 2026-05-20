@@ -77,6 +77,12 @@
 
       <!-- 答案与解析 -->
       <div v-if="showExplanation" class="answer-panel">
+        <!-- 知识点 -->
+        <div v-if="currentProblem.knowledge_point" class="knowledge-block">
+          <div class="answer-label">知识点</div>
+          <div class="knowledge-content" v-html="renderLatex(currentProblem.knowledge_point)"></div>
+        </div>
+
         <!-- 正确答案 -->
         <div class="answer-block">
           <div class="answer-label">正确答案</div>

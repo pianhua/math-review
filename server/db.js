@@ -23,6 +23,41 @@ async function initDb() {
   saveDb();
 }
 
+function migrateProblemsTable() {
+  try {
+    const cols = query("PRAGMA table_info(problems)");
+    if (cols.length > 0 && !cols.some(c => c.name === 'knowledge_point')) {
+      // 需要添加 knowledge_point 列，SQLite 不支持 ALTER TABLE ADD COLUMN
+      // 策略：创建新表，复制数据，删除旧表，重命名
+      db.run(`
+        CREATE TABLE problems_new (
+          id TEXT PRIMARY KEY,
+          chapter TEXT NOT NULL,
+          source TEXT,
+          difficulty TEXT CHECK(difficulty IN ('basic','advanced','exam')),
+          type TEXT,
+          content TEXT NOT NULL,
+          options TEXT NOT NULL,
+          correct TEXT NOT NULL,
+          explanation TEXT,
+          knowledge_point TEXT,
+          is_ai_generated INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      db.run(`
+        INSERT INTO problems_new (id, chapter, source, difficulty, type, content, options, correct, explanation, is_ai_generated, created_at)
+        SELECT id, chapter, source, difficulty, type, content, options, correct, explanation, is_ai_generated, created_at FROM problems
+      `);
+      db.run('DROP TABLE problems');
+      db.run('ALTER TABLE problems_new RENAME TO problems');
+      console.log('Migrated problems table: added knowledge_point column');
+    }
+  } catch (e) {
+    console.error('Migration error:', e);
+  }
+}
+
 function createTables() {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -54,10 +89,13 @@ function createTables() {
       options TEXT NOT NULL,
       correct TEXT NOT NULL,
       explanation TEXT,
+      knowledge_point TEXT,
       is_ai_generated INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  migrateProblemsTable();
 
   db.run(`
     CREATE TABLE IF NOT EXISTS bookmarks (

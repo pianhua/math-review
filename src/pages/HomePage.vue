@@ -50,6 +50,10 @@
           <span v-if="prob.completed" class="tag tag-basic">已完成</span>
         </div>
         <div class="formula-body" v-html="renderLatex(prob.content)"></div>
+        <div v-if="prob.knowledge_point" class="knowledge-block" style="margin-top:8px">
+          <div class="answer-label">知识点</div>
+          <div class="knowledge-content" v-html="renderLatex(prob.knowledge_point)"></div>
+        </div>
         <router-link :to="'/practice?mode=daily&id=' + prob.id" class="btn btn-sm" :class="prob.completed ? 'btn-secondary' : 'btn-primary'" style="margin-top:8px;display:inline-block">
           {{ prob.completed ? '重做' : '做题' }}
         </router-link>
