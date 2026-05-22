@@ -1,8 +1,11 @@
 const express = require('express');
 const { query, run } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { getUserQuota, incrementQuota } = require('../utils/quota');
+const { generateWeakPointReview } = require('../services/ai');
 
 const router = express.Router();
+const REVIEW_COUNT = 5;
 
 // Get user's weak chapters and weak problems
 router.get('/', authMiddleware, (req, res) => {
@@ -64,8 +67,105 @@ router.get('/', authMiddleware, (req, res) => {
 
   res.json({
     weak_chapters: weakChapters,
-    problems_by_chapter: problemsByChapter
+    problems_by_chapter: problemsByChapter,
+    quota: getUserQuota(userId)
   });
+});
+
+// Generate weak point review problems
+router.post('/generate', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // 1. Check quota
+    const quota = getUserQuota(userId);
+    if (quota.remaining <= 0) {
+      return res.status(429).json({ error: '今日 AI 生成次数已用完（5/5），请明天再试' });
+    }
+
+    // 2. Get user's weak problems
+    const weakProblems = query(
+      `SELECT p.*, upp.mastery
+       FROM user_problem_progress upp
+       JOIN problems p ON p.id = upp.problem_id
+       WHERE upp.user_id = ? AND upp.mastery IN ('weak', 'unfamiliar')
+       ORDER BY upp.updated_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+
+    if (weakProblems.length === 0) {
+      return res.status(400).json({ error: '暂无薄弱题目，请先标记掌握程度' });
+    }
+
+    // 3. Build prompt from weak problems
+    const problemList = weakProblems.map((p, i) => {
+      const options = JSON.parse(p.options || '[]');
+      const opts = options.map(o => `${o.label}. ${o.text}`).join(' ');
+      return `${i + 1}. [${p.chapter}] ${p.content} ${opts ? '(' + opts + ')' : ''}`;
+    }).join('\n');
+
+    // 4. Call AI to generate similar problems
+    let generatedProblems = [];
+    let usedAi = false;
+
+    try {
+      const generated = await generateWeakPointReview(problemList, REVIEW_COUNT);
+      if (generated.problems && generated.problems.length > 0) {
+        for (const prob of generated.problems) {
+          const id = `ai-w-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+          run(
+            `INSERT INTO problems (id, chapter, source, difficulty, type, content, options, correct, explanation, knowledge_point, is_ai_generated, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
+            [
+              id,
+              prob.chapter || weakProblems[0].chapter,
+              'AI生成-薄弱专项',
+              prob.difficulty || 'basic',
+              prob.type || '选择题',
+              prob.content,
+              JSON.stringify(prob.options || []),
+              prob.correct,
+              prob.explanation,
+              prob.knowledge_point || ''
+            ]
+          );
+          generatedProblems.push(id);
+        }
+        usedAi = true;
+      }
+    } catch (err) {
+      console.log('AI weak point generation failed, using fallback:', err.message);
+    }
+
+    // 5. Fallback: pick from weak problems pool
+    if (generatedProblems.length === 0) {
+      const shuffled = weakProblems.sort(() => Math.random() - 0.5);
+      generatedProblems = shuffled.slice(0, Math.min(REVIEW_COUNT, shuffled.length)).map(p => p.id);
+    }
+
+    // 6. Increment quota if AI was used
+    if (usedAi) {
+      incrementQuota(userId);
+    }
+
+    // 7. Return generated problems
+    const problems = [];
+    for (const pid of generatedProblems) {
+      const p = query('SELECT * FROM problems WHERE id = ?', [pid]);
+      if (p.length > 0) {
+        problems.push({ ...p[0], options: JSON.parse(p[0].options) });
+      }
+    }
+
+    res.json({
+      problems,
+      quota: getUserQuota(userId)
+    });
+  } catch (err) {
+    console.error('Generate weak point review error:', err);
+    res.status(500).json({ error: 'Failed to generate weak point review' });
+  }
 });
 
 // Update mastery level for a problem

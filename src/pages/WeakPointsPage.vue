@@ -78,8 +78,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { renderLatex } from '../utils/latex.js'
-import { getWeakPoints } from '../api/weakPoints.js'
-import { generateDailyReview } from '../api/dailyReview.js'
+import { getWeakPoints, generateWeakPointReview } from '../api/weakPoints.js'
 import ProblemCard from '../components/ProblemCard.vue'
 
 const loading = ref(true)
@@ -103,9 +102,9 @@ function startPractice(problem) {
 async function generateWeakProblems() {
   generating.value = true
   try {
-    const result = await generateDailyReview()
-    if (result.review && result.review.problems) {
-      currentProblems.value = result.review.problems
+    const result = await generateWeakPointReview()
+    if (result.problems && result.problems.length > 0) {
+      currentProblems.value = result.problems
       isSolving.value = true
     }
     quota.value = result.quota
@@ -127,6 +126,7 @@ async function loadWeakPoints() {
     const data = await getWeakPoints()
     weakChapters.value = data.weak_chapters || []
     problemsByChapter.value = data.problems_by_chapter || {}
+    quota.value = data.quota
     // Expand first chapter by default
     if (weakChapters.value.length > 0) {
       expandedChapters.value[weakChapters.value[0].chapter] = true
