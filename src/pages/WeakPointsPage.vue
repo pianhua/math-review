@@ -1,5 +1,10 @@
 <template>
-  <div v-if="loading" class="empty-state">加载中...</div>
+  <div v-if="loading" class="empty-state">
+    <div class="skeleton-card" style="padding:var(--space-4)">
+      <div class="skeleton skeleton-line" style="width:100px;height:16px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton skeleton-line skeleton-line-short" style="height:12px"></div>
+    </div>
+  </div>
   <div v-else>
     <div class="flex items-center gap-2 mb-3">
       <h1 class="screen-title" style="margin-bottom:0">薄弱专项</h1>
@@ -40,23 +45,26 @@
           </svg>
         </div>
 
-        <div v-if="expandedChapters[chapter.chapter]" class="mb-3">
-          <div v-for="prob in problemsByChapter[chapter.chapter]" :key="prob.id" class="mb-3" style="padding:var(--space-3);background:var(--bg);border-radius:var(--radius-md)">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="tag" :class="prob.mastery === 'weak' ? 'tag-exam' : 'tag-advanced'">
-                {{ prob.mastery === 'weak' ? '薄弱' : '不熟练' }}
-              </span>
-              <span style="font-size:0.8rem;color:var(--dim)">{{ prob.source }}</span>
+        <Transition name="expand">
+          <div v-if="expandedChapters[chapter.chapter]" class="mb-3">
+            <div v-for="prob in problemsByChapter[chapter.chapter]" :key="prob.id" class="mb-3" style="padding:var(--space-3);background:var(--bg);border-radius:var(--radius-md)">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="tag" :class="prob.mastery === 'weak' ? 'tag-exam' : 'tag-advanced'">
+                  {{ prob.mastery === 'weak' ? '薄弱' : '不熟练' }}
+                </span>
+                <span style="font-size:0.8rem;color:var(--dim)">{{ prob.source }}</span>
+              </div>
+              <div class="formula-body" style="margin-bottom:8px" v-html="renderLatex(prob.content)"></div>
+              <button class="btn btn-sm btn-primary" @click.stop="startPractice(prob)">练习此题</button>
             </div>
-            <div class="formula-body" style="margin-bottom:8px" v-html="renderLatex(prob.content)"></div>
-            <button class="btn btn-sm btn-primary" @click="startPractice(prob)">练习此题</button>
           </div>
-        </div>
+        </Transition>
       </div>
 
       <!-- 生成薄弱题目按钮 -->
       <button v-if="weakChapters.length > 0" class="btn btn-primary w-full mb-5" @click="generateWeakProblems" :disabled="generating || (quota?.remaining ?? 5) <= 0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <span v-if="generating" class="spinner-white"></span>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="5 3 19 12 5 21 5 3"/>
         </svg>
         {{ generating ? '生成中...' : '生成薄弱专项题目' }}
@@ -79,7 +87,10 @@
 import { ref, onMounted } from 'vue'
 import { renderLatex } from '../utils/latex.js'
 import { getWeakPoints, generateWeakPointReview } from '../api/weakPoints.js'
+import { useToast } from '../composables/useToast.js'
 import ProblemCard from '../components/ProblemCard.vue'
+
+const { error: toastError } = useToast()
 
 const loading = ref(true)
 const generating = ref(false)
@@ -109,7 +120,7 @@ async function generateWeakProblems() {
     }
     quota.value = result.quota
   } catch (err) {
-    alert('生成失败：' + (err.response?.data?.error || err.message || '请检查网络连接'))
+    toastError('生成失败：' + (err.response?.data?.error || err.message || '请检查网络连接'))
   } finally {
     generating.value = false
   }
@@ -141,3 +152,19 @@ onMounted(async () => {
   loading.value = false
 })
 </script>
+
+<style scoped>
+.spinner-white {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>

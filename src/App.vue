@@ -1,5 +1,25 @@
 <template>
   <div class="app-shell">
+    <!-- Toast 通知 -->
+    <template v-for="toast in toasts" :key="toast.id">
+      <Teleport to="body">
+        <Transition name="toast">
+          <div v-if="toast.visible" class="toast-container" :class="'toast-' + toast.type">
+            <svg v-if="toast.type === 'success'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <svg v-else-if="toast.type === 'error'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span class="toast-msg">{{ toast.message }}</span>
+          </div>
+        </Transition>
+      </Teleport>
+    </template>
+
     <!-- 移动端顶部栏 -->
     <header class="top-header" v-if="auth.isLoggedIn">
       <div class="brand">考研数学</div>
@@ -41,7 +61,11 @@
 
     <!-- 页面内容 -->
     <main class="screen" :class="{ 'screen-authed': auth.isLoggedIn }">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </router-view>
     </main>
 
     <!-- 移动端底部导航 -->
@@ -58,14 +82,17 @@
 </template>
 
 <script setup>
-import { onMounted, watch } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth.js'
+import { useToast } from './composables/useToast.js'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const { toasts } = useToast()
 
+import { watch } from 'vue'
 watch(() => auth.isLoggedIn, (loggedIn) => {
   if (!loggedIn && route.meta.requiresAuth) {
     router.push('/login')
@@ -109,5 +136,77 @@ onMounted(() => {
 .router-link-active {
   text-decoration: none;
   color: inherit;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: calc(var(--header-height, 52px) + var(--safe-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+  backdrop-filter: blur(12px);
+}
+
+.toast-info {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.toast-success {
+  background: rgba(61, 122, 90, 0.92);
+  color: #fff;
+}
+
+.toast-error {
+  background: rgba(181, 51, 51, 0.92);
+  color: #fff;
+}
+
+.toast-msg {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-enter-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-leave-active {
+  transition: all 0.2s ease-in;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* Page transition */
+.page-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.page-leave-active {
+  transition: opacity 0.15s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.page-leave-to {
+  opacity: 0;
 }
 </style>

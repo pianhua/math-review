@@ -1,5 +1,19 @@
 <template>
-  <div v-if="loading" class="empty-state">加载中...</div>
+  <!-- Skeleton Loading -->
+  <div v-if="loading" class="skeleton-home">
+    <div class="skeleton skeleton-line" style="width:120px;height:24px;margin-bottom:var(--space-5)"></div>
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-line" style="width:80px;height:16px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton skeleton-line skeleton-line-short" style="height:12px"></div>
+      <div class="skeleton skeleton-line" style="width:100%;height:40px;margin-top:var(--space-3);border-radius:var(--radius-md)"></div>
+    </div>
+    <div class="skeleton-card" style="padding:var(--space-4)">
+      <div class="skeleton skeleton-line" style="width:100px;height:16px;margin-bottom:var(--space-3)"></div>
+      <div class="skeleton skeleton-line" style="width:100%;height:6px;margin-bottom:var(--space-2)"></div>
+      <div class="skeleton skeleton-line" style="width:100%;height:6px;margin-bottom:var(--space-2)"></div>
+    </div>
+  </div>
+
   <div v-else>
     <h1 class="screen-title">{{ today }}</h1>
 
@@ -21,7 +35,8 @@
           今日复习题目尚未生成。系统将根据你的薄弱知识点生成个性化复习题目。
         </p>
         <button class="btn btn-primary w-full" @click="generateReview" :disabled="generating">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <span v-if="generating" class="spinner-white"></span>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
           {{ generating ? '生成中...' : '生成今日复习' }}
@@ -69,22 +84,7 @@
           完成 {{ review.problems.length }} 题，继续加油
         </div>
         <div class="flex gap-2 justify-center">
-          <button class="btn btn-secondary btn-sm" @click="resetState">再来一组</button>
           <router-link to="/weak-points" class="btn btn-ghost btn-sm">查看薄弱专项</router-link>
-        </div>
-      </div>
-    </div>
-
-    <!-- 章节掌握度 -->
-    <div class="card" v-if="mastery && mastery.chapters && mastery.chapters.length > 0">
-      <div class="card-title mb-3">章节掌握度</div>
-      <div v-for="chapter in mastery.chapters" :key="chapter.name" class="mb-3">
-        <div class="flex justify-between mb-1">
-          <span style="font-size:0.9rem;font-weight:500">{{ chapter.name }}</span>
-          <span style="font-size:0.8rem;color:var(--dim)">{{ chapter.correct }}/{{ chapter.solved }} 正确</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: chapterPercent(chapter) + '%' }"></div>
         </div>
       </div>
     </div>
@@ -100,8 +100,8 @@
       </router-link>
       <router-link to="/formula" class="btn btn-secondary w-full">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          <path d="M9 4v6.5a3.5 3.5 0 1 0 7 0V4"/>
+          <line x1="6" y1="4" x2="18" y2="4"/>
         </svg>
         背诵公式
       </router-link>
@@ -113,7 +113,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { getMastery } from '../api/mastery.js'
 import { getDailyReview, generateDailyReview } from '../api/dailyReview.js'
+import { useToast } from '../composables/useToast.js'
 import ProblemCard from '../components/ProblemCard.vue'
+
+const { error: toastError } = useToast()
 
 const loading = ref(true)
 const generating = ref(false)
@@ -138,11 +141,6 @@ const progressPercent = computed(() => {
   return Math.round((completed / total) * 100)
 })
 
-const chapterPercent = (chapter) => {
-  if (chapter.solved === 0) return 0
-  return Math.round((chapter.correct / chapter.solved) * 100)
-}
-
 async function loadDailyReview() {
   try {
     const result = await getDailyReview()
@@ -160,7 +158,7 @@ async function generateReview() {
     review.value = result.review
     quota.value = result.quota
   } catch (err) {
-    alert('生成失败：' + (err.response?.data?.error || err.message || '请检查网络连接'))
+    toastError('生成失败：' + (err.response?.data?.error || err.message || '请检查网络连接'))
   } finally {
     generating.value = false
   }
@@ -174,7 +172,6 @@ function startSolving() {
 function onComplete() {
   isSolving.value = false
   isComplete.value = true
-  // Refresh review data to update completed count
   loadDailyReview()
 }
 
@@ -182,22 +179,34 @@ function onProblemChanged() {
   // Could track problem changes here if needed
 }
 
-function resetState() {
-  isSolving.value = false
-  isComplete.value = false
-  review.value = null
-  loadDailyReview()
-}
-
 onMounted(async () => {
   try {
-    const [m, r] = await Promise.all([
+    await Promise.all([
       getMastery().catch(() => null),
       loadDailyReview()
     ])
-    mastery.value = m
   } finally {
     loading.value = false
   }
 })
 </script>
+
+<style scoped>
+.skeleton-home {
+  padding-top: var(--space-4);
+}
+
+.spinner-white {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>

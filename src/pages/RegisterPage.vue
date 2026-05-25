@@ -11,12 +11,19 @@
         </div>
         <div class="form-group">
           <label>密码</label>
-          <input v-model="password" type="password" placeholder="至少 6 位" required />
+          <input v-model="password" type="password" placeholder="至少 6 位" required @input="checkStrength" />
+          <div v-if="password.length > 0" class="strength-bar">
+            <div class="strength-fill" :class="strengthClass" :style="{ width: strengthPercent + '%' }"></div>
+          </div>
+          <div v-if="password.length > 0" class="strength-label" :class="strengthClass">{{ strengthText }}</div>
         </div>
 
-        <div v-if="error" class="error-msg">{{ error }}</div>
+        <Transition name="slide">
+          <div v-if="error" class="error-msg">{{ error }}</div>
+        </Transition>
 
         <button type="submit" class="btn btn-primary w-full" :disabled="auth.loading">
+          <span v-if="auth.loading" class="spinner"></span>
           {{ auth.loading ? '注册中...' : '注册' }}
         </button>
       </form>
@@ -29,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
@@ -38,6 +45,30 @@ const auth = useAuthStore()
 const username = ref('')
 const password = ref('')
 const error = ref('')
+
+const strengthLevel = ref(0)
+
+const checkStrength = () => {
+  let score = 0
+  if (password.value.length >= 6) score++
+  if (password.value.length >= 10) score++
+  if (/[A-Z]/.test(password.value)) score++
+  if (/[0-9]/.test(password.value)) score++
+  if (/[^A-Za-z0-9]/.test(password.value)) score++
+  strengthLevel.value = score
+}
+
+const strengthPercent = computed(() => strengthLevel.value * 20)
+const strengthClass = computed(() => {
+  if (strengthLevel.value <= 1) return 'strength-weak'
+  if (strengthLevel.value <= 3) return 'strength-medium'
+  return 'strength-strong'
+})
+const strengthText = computed(() => {
+  if (strengthLevel.value <= 1) return '弱'
+  if (strengthLevel.value <= 3) return '中等'
+  return '强'
+})
 
 async function handleRegister() {
   if (username.value.length < 3) {
@@ -102,15 +133,20 @@ async function handleRegister() {
   color: var(--fg);
   font-family: inherit;
   font-size: 0.95rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .form-group input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 .error-msg {
   color: var(--danger);
   font-size: 0.85rem;
   margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(181, 51, 51, 0.08);
+  border-radius: var(--radius-sm);
 }
 .auth-switch {
   text-align: center;
@@ -121,5 +157,58 @@ async function handleRegister() {
 .auth-switch a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: var(--space-1);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.strength-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-weak { background: var(--danger); }
+.strength-medium { background: var(--warn); }
+.strength-strong { background: var(--success); }
+
+.strength-label {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.slide-enter-active {
+  transition: all 0.2s ease-out;
+}
+.slide-leave-active {
+  transition: all 0.15s ease-in;
+}
+.slide-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.slide-leave-to {
+  opacity: 0;
 }
 </style>

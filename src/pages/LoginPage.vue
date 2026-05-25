@@ -14,9 +14,12 @@
           <input v-model="password" type="password" placeholder="输入密码" required />
         </div>
 
-        <div v-if="error" class="error-msg">{{ error }}</div>
+        <Transition name="slide">
+          <div v-if="error" class="error-msg">{{ error }}</div>
+        </Transition>
 
         <button type="submit" class="btn btn-primary w-full" :disabled="auth.loading">
+          <span v-if="auth.loading" class="spinner"></span>
           {{ auth.loading ? '登录中...' : '登录' }}
         </button>
       </form>
@@ -94,15 +97,20 @@ async function handleLogin() {
   color: var(--fg);
   font-family: inherit;
   font-size: 0.95rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .form-group input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 .error-msg {
   color: var(--danger);
   font-size: 0.85rem;
   margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(181, 51, 51, 0.08);
+  border-radius: var(--radius-sm);
 }
 .auth-switch {
   text-align: center;
@@ -113,5 +121,38 @@ async function handleLogin() {
 .auth-switch a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: var(--space-1);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.slide-enter-active {
+  transition: all 0.2s ease-out;
+}
+.slide-leave-active {
+  transition: all 0.15s ease-in;
+}
+.slide-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+  max-height: 0;
+}
+.slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
 }
 </style>

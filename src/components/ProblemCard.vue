@@ -15,15 +15,26 @@
       <button v-for="opt in currentProblem.options" :key="opt.label"
               class="option-row"
               :class="getOptionClass(opt.label)"
-              :disabled="answered"
+              :disabled="confirmed"
               @click="selectOption(opt.label)">
         <span class="option-label">{{ opt.label }}</span>
         <span v-html="renderLatex(opt.text)"></span>
       </button>
     </div>
 
+    <!-- 选择题确认按钮 -->
+    <div v-if="isChoice && selectedOption && !confirmed" class="mt-3">
+      <button class="btn btn-primary w-full" @click="confirmAnswer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        确认提交
+      </button>
+      <button class="btn btn-ghost btn-sm w-full mt-2" @click="selectedOption = null">重新选择</button>
+    </div>
+
     <!-- 填空/解答题输入区 -->
-    <div v-else class="mb-3">
+    <div v-else-if="!isChoice" class="mb-3">
       <div v-if="!answerRevealed">
         <textarea
           v-if="isEssay"
@@ -47,6 +58,17 @@
 
     <!-- 答案与解析 -->
     <div v-if="showExplanation" class="answer-panel">
+      <!-- 判定结果 -->
+      <div v-if="isChoice" class="result-badge" :class="isCorrect ? 'result-correct' : 'result-wrong'">
+        <svg v-if="isCorrect" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        <span>{{ isCorrect ? '回答正确！' : '回答错误' }}</span>
+      </div>
+
       <!-- 知识点 -->
       <div v-if="currentProblem.knowledge_point" class="knowledge-block">
         <div class="answer-label">知识点</div>
@@ -65,7 +87,7 @@
         <div v-html="renderLatex(currentProblem.explanation)"></div>
       </div>
 
-      <!-- 掌握程度标记（Issue #2）-->
+      <!-- 掌握程度标记 -->
       <div v-if="showMastery" class="mastery-block mt-3">
         <div class="answer-label">掌握程度</div>
         <div class="flex gap-2 mt-2">
@@ -102,12 +124,18 @@
       </div>
     </div>
 
-    <!-- 导航 -->
-    <div v-if="!answered" class="flex justify-between items-center mt-2">
-      <span style="font-size:0.8rem;color:var(--dim)">第 {{ currentIdx + 1 }} / {{ problems.length }} 题</span>
-      <div class="flex gap-2">
-        <button class="btn btn-ghost btn-sm" @click="prev" :disabled="currentIdx === 0">上一题</button>
-        <button class="btn btn-ghost btn-sm" @click="next" :disabled="currentIdx === problems.length - 1">下一题</button>
+    <!-- 顶部进度条 -->
+    <div v-if="problems.length > 1" class="problem-progress mt-3">
+      <div class="progress-bar" style="height:4px">
+        <div class="progress-fill" :style="{ width: ((currentIdx + 1) / problems.length * 100) + '%' }"></div>
+      </div>
+      <div class="flex justify-between items-center mt-2">
+        <span style="font-size:0.8rem;color:var(--dim)">第 {{ currentIdx + 1 }} / {{ problems.length }} 题</span>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" @click="prev" :disabled="currentIdx === 0">上一题</button>
+          <button v-if="!confirmed" class="btn btn-ghost btn-sm" @click="next" :disabled="currentIdx === problems.length - 1">跳过</button>
+          <button v-else class="btn btn-ghost btn-sm" @click="next" :disabled="currentIdx === problems.length - 1">下一题</button>
+        </div>
       </div>
     </div>
   </div>
@@ -129,6 +157,7 @@ const emit = defineEmits(['complete', 'problem-changed'])
 
 const currentIdx = ref(0)
 const selectedOption = ref(null)
+const confirmed = ref(false)
 const showExplanation = ref(false)
 const userAnswer = ref('')
 const answerRevealed = ref(false)
@@ -152,8 +181,13 @@ const isEssay = computed(() => {
 })
 
 const answered = computed(() => {
-  if (isChoice.value) return selectedOption.value !== null
+  if (isChoice.value) return confirmed.value
   return answerRevealed.value && selfRatedCorrect.value !== null
+})
+
+const isCorrect = computed(() => {
+  if (!isChoice.value || !confirmed.value) return false
+  return selectedOption.value === currentProblem.value.correct
 })
 
 // Watch for problem changes to reset state and fetch mastery
@@ -172,13 +206,16 @@ watch(currentProblem, async (newProblem) => {
   }
 }, { immediate: true })
 
-const selectOption = async (label) => {
+const selectOption = (label) => {
   selectedOption.value = label
-  showExplanation.value = true
+}
 
-  const isCorrect = label === currentProblem.value.correct
+const confirmAnswer = async () => {
+  confirmed.value = true
+  showExplanation.value = true
+  const isCorrectVal = selectedOption.value === currentProblem.value.correct
   try {
-    await submitAttempt(currentProblem.value.id, label, isCorrect)
+    await submitAttempt(currentProblem.value.id, selectedOption.value, isCorrectVal)
   } catch (err) {
     console.error('Submit attempt failed:', err)
   }
@@ -209,6 +246,7 @@ const markMastery = async (level) => {
 
 const resetProblem = () => {
   selectedOption.value = null
+  confirmed.value = false
   showExplanation.value = false
   userAnswer.value = ''
   answerRevealed.value = false
@@ -254,11 +292,13 @@ const toggleBookmark = async () => {
 }
 
 const getOptionClass = (label) => {
-  if (!selectedOption.value) return ''
-  if (selectedOption.value === label) {
-    return selectedOption.value === currentProblem.value.correct ? 'correct' : 'wrong'
+  if (!confirmed.value) {
+    return selectedOption.value === label ? 'selected' : ''
   }
-  return label === currentProblem.value.correct ? 'correct' : ''
+  // After confirmation
+  if (label === currentProblem.value.correct) return 'correct'
+  if (label === selectedOption.value && label !== currentProblem.value.correct) return 'wrong'
+  return ''
 }
 
 const getDiffTag = (difficulty) => {
@@ -280,5 +320,30 @@ const getDiffLabel = (difficulty) => {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+}
+
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: var(--space-3);
+}
+
+.result-correct {
+  background: rgba(61, 122, 90, 0.10);
+  color: var(--success);
+}
+
+.result-wrong {
+  background: rgba(181, 51, 51, 0.10);
+  color: var(--danger);
+}
+
+.problem-progress {
+  margin-top: var(--space-3);
 }
 </style>
