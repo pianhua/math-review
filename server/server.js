@@ -15,7 +15,6 @@ const allowedOrigins = process.env.CORS_ORIGINS
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(null, false);
@@ -24,7 +23,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Health check (must be before catch-all)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/formulas', require('./routes/formulas'));
 app.use('/api/problems', require('./routes/problems'));
@@ -35,18 +39,13 @@ app.use('/api/mastery', require('./routes/mastery'));
 app.use('/api/daily-review', require('./routes/dailyReview'));
 app.use('/api/weak-points', require('./routes/weakPoints'));
 
-// Serve static files in production
+// Serve static files in production (catch-all SPA fallback)
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../dist')));
-  app.get('*', (req, res) => {
+  app.get('/*path', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   });
 }
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
 
 // Error handler
 app.use((err, req, res, next) => {
